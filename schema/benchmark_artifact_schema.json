@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MultiNodeVLLMBenchmarkArtifact",
+  "type": "object",
+  "required": ["metadata", "sweeps", "handshake_telemetry"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["node_count", "gpus_per_node", "gpu_model", "interconnect", "framework_versions", "model_name", "parallelism"],
+      "properties": {
+        "node_count": { "type": "integer", "minimum": 1 },
+        "gpus_per_node": { "type": "integer", "minimum": 1 },
+        "gpu_model": { "type": "string" },
+        "interconnect": { "type": "string", "enum": ["TCP_ETHERNET", "PCIE_PHB", "NVLINK", "INFINIBAND"] },
+        "framework_versions": {
+          "type": "object",
+          "properties": {
+            "vllm": { "type": "string" },
+            "ray": { "type": "string" },
+            "torch": { "type": "string" }
+          }
+        },
+        "model_name": { "type": "string" },
+        "parallelism": {
+          "type": "object",
+          "required": ["pipeline_parallel_size", "tensor_parallel_size"],
+          "properties": {
+            "pipeline_parallel_size": { "type": "integer" },
+            "tensor_parallel_size": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "sweeps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["concurrency", "input_tokens", "output_tokens", "throughput_tok_per_sec", "ttft_ms_p95", "tpot_ms_p95"],
+        "properties": {
+          "concurrency": { "type": "integer" },
+          "input_tokens": { "type": "integer" },
+          "output_tokens": { "type": "integer" },
+          "throughput_tok_per_sec": { "type": "number" },
+          "ttft_ms_p95": { "type": "number" },
+          "tpot_ms_p95": { "type": "number" },
+          "gpu_memory_used_mb": { "type": "number" }
+        }
+      }
+    },
+    "handshake_telemetry": {
+      "type": "object",
+      "required": ["inter_node_latency_ms", "rank0_status", "rank1_status"],
+      "properties": {
+        "inter_node_latency_ms": { "type": "number" },
+        "rank0_status": { "type": "string" },
+        "rank1_status": { "type": "string" }
+      }
+    }
+  }
+}
