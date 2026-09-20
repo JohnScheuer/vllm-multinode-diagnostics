@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.2.0",
+  "experiment_id": "example-aws-g4dn-pp2",
+  "timestamp_utc": "2026-09-20T00:00:00+00:00",
+  "metadata": {
+    "platform": "AWS EC2",
+    "region": "example-region",
+    "availability_zone": "example-zone",
+    "instance_type": "g4dn.xlarge",
+    "ami_id": null,
+    "framework_versions": {
+      "python": "3.11.x",
+      "vllm": "0.18.1",
+      "vllm_git_sha": null,
+      "ray": "example",
+      "torch": "example",
+      "cuda_runtime": "example",
+      "cuda_toolkit": null,
+      "nccl": null,
+      "nvidia_driver": "example"
+    }
+  },
+  "topology": {
+    "node_count": 2,
+    "gpus_per_node": 1,
+    "gpu_model": "NVIDIA T4",
+    "gpu_memory_mb": 16384,
+    "compute_capability": "7.5",
+    "network": {
+      "transport": "TCP",
+      "interface": "ENA",
+      "efa_enabled": false,
+      "baseline_bandwidth_gbps": 5,
+      "max_bandwidth_gbps": 25
+    }
+  },
+  "model": {
+    "name": "example/model",
+    "revision": null,
+    "dtype": "float16",
+    "max_model_len": 2048
+  },
+  "parallelism": {
+    "tensor_parallel_size": 1,
+    "pipeline_parallel_size": 2,
+    "data_parallel_size": 1,
+    "distributed_executor_backend": "ray"
+  },
+  "workload": {
+    "concurrency_levels": [1, 8, 16, 32],
+    "input_tokens": 512,
+    "output_tokens": 128,
+    "request_count_per_level": 32,
+    "warmup_requests": 4
+  },
+  "sweeps": [
+    {
+      "concurrency": 1,
+      "input_tokens": 512,
+      "output_tokens": 128,
+      "request_throughput_rps": 1.0,
+      "input_throughput_tok_per_sec": 512.0,
+      "output_throughput_tok_per_sec": 128.0,
+      "ttft_ms_p50": 100.0,
+      "ttft_ms_p95": 110.0,
+      "ttft_ms_p99": 115.0,
+      "tpot_ms_p50": 20.0,
+      "tpot_ms_p95": 22.0,
+      "tpot_ms_p99": 24.0,
+      "e2e_latency_ms_p50": 2600.0,
+      "e2e_latency_ms_p95": 2800.0,
+      "e2e_latency_ms_p99": 2900.0,
+      "gpu_memory_used_mb_peak": 12000.0
+    }
+  ],
+  "handshake_telemetry": {
+    "inter_node_latency_ms": 0.5,
+    "rank_status": [
+      {
+        "rank": 0,
+        "node": "node-0",
+        "status": "READY"
+      },
+      {
+        "rank": 1,
+        "node": "node-1",
+        "status": "READY"
+      }
+    ]
+  }
+}

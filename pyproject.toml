@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vllm-multinode-diagnostics"
+version = "0.1.0"
+description = "Telemetry, artifact validation, and diagnostics for multi-node vLLM inference."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "vllm-multinode-diagnostics contributors" }
+]
+dependencies = [
+  "jsonschema>=4.23"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8"
+]
+
+[project.scripts]
+multinode-schema-validate = "multinode_diag.schema_val:main"
+multinode-collect-env = "multinode_diag.collect_env:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"

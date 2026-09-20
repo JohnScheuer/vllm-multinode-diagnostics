@@ -7,3 +7,24 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+# Local environment/provenance captures
+*.local-env.json
+.env
+.env.*
+!.env.example
+
+# Credentials and cloud keys
+*.pem
+*.key
+credentials
+aws_credentials
+
+# Runtime logs and Ray state
+*.log
+ray_results/
+ray_session_*/
+nohup.out
+
+# Local benchmark scratch data
+artifacts/tmp/
+artifacts/local/

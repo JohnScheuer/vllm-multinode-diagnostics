@@ -1,61 +1,186 @@
 # Multi-Node vLLM Telemetry & Automated Diagnostic Engine
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![vLLM](https://img.shields.io/badge/vLLM-Distributed-orange)
 
-An empirical performance characterization suite and diagnostic engine for multi-node LLM serving (Ray + vLLM). Built for measuring inter-node communication bounds, pipeline bubbles, and tail latency tradeoffs in distributed inference.
+A reproducible telemetry, benchmarking, and diagnostic framework for
+multi-node vLLM inference.
 
-## 🎯 Architecture Overview
+The project is being developed around distributed vLLM deployments using
+Ray, with an initial two-node pipeline-parallel baseline and a future
+NVIDIA Nemotron diagnostic reasoning layer.
 
-When scaling LLM inference across separate compute nodes, performance transitions from **compute-bound** to **inter-node communication-bound**. This repository provides:
+## Architecture
 
-1. **Schema-Enforced Multi-Node Telemetry:** Structured JSON exports tracking Ray cluster handshakes, $p_{95}$ TTFT, $p_{95}$ TPOT, and throughput across Pipeline Parallel ($PP \ge 2$) execution.
-2. **Communication-Cost Modeling:** Analytical $\alpha\text{--}\beta$ model decomposition separating network latency penalties from execution bubbles.
-3. **Automated Diagnostic Reasoning Layer:** LLM-assisted diagnostic engine (powered by NVIDIA Nemotron via Nebius Token Factory) parsing raw metrics to generate evidence-backed performance post-mortems.
+The intended data flow is:
 
-┌───────────────────────────┐ ┌───────────────────────────┐
-│ Raw Multi-Node Telemetry │ ---> │ Empirical Diagnostic │ ---> │ Automated Nemotron │
-│ (vLLM / Ray PP=2 Artifact)│ │ Engine (Alpha-Beta Model) │ │ Bottleneck Post-Mortem │
-└───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘
+```text
+vLLM / Ray benchmark
+        |
+        v
+raw benchmark artifact
+        |
+        v
+schema validation
+        |
+        v
+empirical diagnostics
+        |
+        v
+Nemotron-assisted post-mortem
+```
 
+The benchmark and diagnostics layers are intentionally separated from any
+specific vLLM compatibility distribution.
 
-## 📂 Project Structure
+## Initial Experimental Topology
 
+The first planned distributed baseline is:
+
+```text
+Node 0                      Node 1
+1 x NVIDIA T4              1 x NVIDIA T4
+Ray head                   Ray worker
+PP rank 0                  PP rank 1
+      \                    /
+       ---- TCP network ----
+
+TP = 1
+PP = 2
+DP = 1
+```
+
+The planned initial concurrency matrix is:
+
+```text
+[1, 8, 16, 32]
+```
+
+with controlled input and output token counts.
+
+## Repository Structure
+
+```text
 vllm-multinode-diagnostics/
-├── schema/ # Schema definition for multi-node JSON artifacts
-│ └── benchmark_artifact_schema.json
-├── artifacts/ # Raw multi-node benchmark runs (JSONs & logs)
-│ └── raw_runs/
+├── artifacts/
+│   ├── examples/
+│   └── raw_runs/
+├── schema/
+│   └── benchmark_artifact_schema.json
 ├── src/
-│ └── multinode_diag/ # Core diagnostic reasoning engine & profiler
-│ ├── init.py
-│ ├── schema_val.py # Schema validator
-│ └── alpha_beta.py # Analytical communication cost models
-├── tests/ # Pytest validation suite
-└── README.md
+│   └── multinode_diag/
+│       ├── __init__.py
+│       ├── collect_env.py
+│       └── schema_val.py
+├── tests/
+├── LICENSE
+├── README.md
+└── pyproject.toml
+```
 
+## Python
 
-## 🚀 Quickstart
+Python 3.11 or newer is required.
 
-### 1. Validate Benchmark Artifacts
-Ensure raw JSON exports adhere to the strict schema before diagnostic parsing:
+A virtual environment is not required.
 
-python -m multinode_diag.schema_val --file artifacts/raw_runs/sample_run.json
+For development from a source checkout:
 
-2. Run Communication Cost Diagnostics
+```bash
+PYTHONPATH=src python3.11 -m multinode_diag.collect_env --pretty
+```
 
-python -m multinode_diag.alpha_beta --file artifacts/raw_runs/sample_run.json
+## Validate an Artifact
 
-📊 Benchmark Schema Spec
-Artifacts exported by multi-node execution workers must conform to schema/benchmark_artifact_schema.json, covering:
+```bash
+PYTHONPATH=src python3.11 -m multinode_diag.schema_val \
+  --file artifacts/examples/aws-g4dn-pp2-sample.json
+```
 
-Node topology & GPU interconnect (TCP Ethernet, NVLink, PCIe PHB)
-Concurrency sweeps (c∈[1,8,16,32]
-Time-to-First-Token (p95  TTFT) & Time-per-Output-Token (p95 TPOT)
-Inter-node rank handshake verification logs
+A valid artifact prints:
 
+```text
+VALID: artifacts/examples/aws-g4dn-pp2-sample.json
+```
 
-📜 License
-MIT License. Free for open-source research and distributed serving evaluation.
+## Collect Node Provenance
+
+The environment collector records:
+
+- operating system and kernel
+- Python runtime
+- selected Python package versions
+- network interfaces
+- NVIDIA GPU information when available
+- NVIDIA driver metadata
+- CUDA toolkit information when `nvcc` is available
+- GCC information
+
+Unsupported NVIDIA telemetry values such as `N/A` are represented as JSON
+`null` rather than causing collection to fail.
+
+Run:
+
+```bash
+PYTHONPATH=src python3.11 -m multinode_diag.collect_env --pretty
+```
+
+Write a manifest to disk:
+
+```bash
+PYTHONPATH=src python3.11 -m multinode_diag.collect_env \
+  --pretty \
+  --output node-env.json
+```
+
+Review machine-specific manifests before committing them.
+
+## Benchmark Artifact Schema
+
+The schema separates:
+
+- execution platform and framework provenance
+- node and GPU topology
+- inter-node network topology
+- model identity and revision
+- tensor, pipeline, and data parallel configuration
+- workload definition
+- latency and throughput measurements
+- distributed rank handshake state
+
+Inter-node networking is intentionally modeled separately from GPU/device
+interconnect concepts.
+
+## Testing
+
+Install the development requirements into the active Python 3.11 user
+environment as needed:
+
+```bash
+python3.11 -m pip install --user pytest jsonschema
+```
+
+Run:
+
+```bash
+PYTHONPATH=src python3.11 -m pytest -q
+```
+
+The current unit tests do not require Ray, vLLM, CUDA, or an NVIDIA GPU.
+
+## Roadmap
+
+Planned follow-up work includes:
+
+1. Ray two-node cluster bootstrap and verification.
+2. Upstream vLLM pipeline-parallel launch support.
+3. Controlled concurrency benchmark execution.
+4. Per-node GPU and host telemetry.
+5. Normalized benchmark artifact generation.
+6. Communication-cost analysis.
+7. NVIDIA Nemotron / Nebius diagnostic reasoning.
+
+## License
+
+MIT License.
